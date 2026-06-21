@@ -10,6 +10,13 @@ docker first checks whether the image is on local machine, if not it will be fet
 * Docker Compose: tool to manage multiple containers using a single YAML file instaed of terminal
 YAML file: human-readable config file that defines services, networks, and settings
 
+* Docker image layers
+
+[ CMD layer ]
+[ dependencies layer ]
+[ app code layer ]
+[ base layer ]
+
 
 # Docker Beginner Commands Cheat Sheet
 
@@ -119,7 +126,7 @@ docker container prune
 # Remove unused images
 docker image prune
 
-# Remove unused volumes
+# Remove unused volumes  (anonymus volumes are targeted)
 docker volume prune
 
 # Remove everything unused
@@ -363,4 +370,292 @@ What happens:
 4. Starts both containers
 5. Connects them automatically
 
+* We do not create any network explicitly in the yaml file for the container  communaication unlike terminal....docker by deafult creates network for those containers
 
+
+================
+
+1. What is a Docker Volume?
+
+A Docker volume is a persistent storage location managed by Docker.
+
+👉 It stores data outside the container lifecycle.
+
+Container deleted ❌ → Data lost (no volume)
+Container deleted ❌ → Data safe (with volume) ✅
+2. Who manages volumes?
+
+👉 Docker Engine manages volumes, not your app, not the container.
+
+Docker creates it
+Docker stores it on host machine
+Docker attaches it to containers
+App → writes data
+Container → passes data
+Docker → stores it in volume
+3. Types of Docker Volumes
+(1) Named Volume (MOST IMPORTANT)
+pgdata:/var/lib/postgresql/data
+Features:
+Managed by Docker
+Best for databases (Postgres, MySQL)
+Survives container deletion
+(2) Anonymous Volume
+docker run -v /data postgres
+Features:
+No name
+Docker creates random ID
+Hard to manage
+Managed by Docker
+Mostly temporary use
+(3) Bind Mount (Host Path)
+./data:/var/lib/postgresql/data
+Features:
+Uses your laptop folder
+Good for development
+Not ideal for production DB
+Managed by host os
+4. Volume mapping (important concept)
+HOST STORAGE  →  CONTAINER PATH
+
+Example:
+
+pgdata:/var/lib/postgresql/data
+
+Means:
+
+Docker volume (pgdata)
+        ↓
+Postgres data folder inside container
+
+version: "3.9"
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+
+
+here, pgdata:/var/lib/postgresql/data means Docker stores Postgres database files from the container’s data directory into a persistent Docker-managed volume called pgdata.
+
+
+Docker Volume Types (List)
+Named Volume
+Managed by Docker
+Example: mydata:/app/data
+Bind Mount
+Managed by Host OS (your laptop)
+Example: ./data:/app/data
+Anonymous Volume
+Auto-created by Docker with random name
+Example: /app/data (no name given)
+
+
+why there are 2 volumes in the code ??
+
+1. Inside the service (usage)
+volumes:
+  - pgdata:/var/lib/postgresql/data
+
+👉 This is mounting a volume to the container
+
+Meaning:
+
+pgdata (Docker storage)
+   ↓
+/var/lib/postgresql/data (inside Postgres container)
+
+This is where Postgres stores its database files.
+
+2. At the bottom (definition)
+volumes:
+  pgdata:
+
+👉 This is declaring the volume
+
+Meaning:
+
+“Hey Docker, create and manage a volume named pgdata”
+3. Why both are needed
+
+Think like this:
+
+Step 1: Declare storage
+Create a disk called pgdata
+Step 2: Attach storage
+Connect pgdata → Postgres data folder
+
+The first “volume” attaches storage to Postgres, and the second “volume” declares and creates that storage in Docker.
+
+=============================
+
+1. Bridge network (DEFAULT)
+What it is:
+
+Containers talk to each other through a virtual private network inside Docker.
+
+Container A  ←→  Container B
+        (bridge network)
+Example:
+docker run postgres
+
+👉 Automatically uses bridge network
+
+Key idea:
+Containers get private IPs
+Can communicate using container names
+Isolated from host
+Real meaning:
+Docker creates a virtual switch (bridge)
+Location (internally):
+/var/lib/docker/network/
+docker0 bridge interface
+2. Host network
+What it is:
+
+Container uses your laptop’s network directly
+
+No isolation between host and container
+Example:
+docker run --network host nginx
+Meaning:
+Container port = Host port
+localhost:80 → container:80
+Key idea:
+No port mapping needed (-p ignored)
+Fast performance
+No network isolation
+Real meaning:
+Container is directly attached to your machine network
+3. None network (NULL)
+What it is:
+
+Container has NO network at all
+
+No internet
+No localhost
+No communication
+Example:
+docker run --network none alpine
+Key idea:
+Fully isolated container
+No inbound/outbound traffic
+Only file/process execution
+
+===========================
+
+* Dockerizing an app
+
+FROM → choose base image (start system)
+WORKDIR → where you work inside container
+COPY    → bring files in
+RUN     → install/setup commands
+EXPOSE  → show port used by app
+ENV     → set environment variables
+CMD     → start app
+
+=========================
+FROM python:3.12
+
+# Set working directory inside container
+WORKDIR /app
+
+# Copy project files into container
+COPY . .
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV APP_ENV=development
+
+# Install dependencies
+RUN pip install -r requirements.txt
+
+# Expose port (informational, not publishing)
+EXPOSE 8000
+
+# Run application
+CMD ["python", "app.py"]
+
+=========================
+
+---Base image
+FROM python:3.12
+
+👉 Start with Python already installed
+👉 This is your base system
+
+--- Working directory
+WORKDIR /app
+
+👉 Inside container, use /app folder
+👉 All commands run from here
+
+---Copy files
+COPY . .
+
+👉 Copy your project from laptop → container
+
+Laptop folder → Container /app
+--- Install dependencies
+RUN pip install -r requirements.txt
+
+👉 Install Python libraries inside container
+
+
+--- What EXPOSE means
+EXPOSE 8000
+
+👉 It tells Docker:
+
+“This app uses port 8000 inside the container”
+
+Important truth:
+It does NOT open the port to your laptop
+It is just documentation / metadata
+
+To actually access it, you still need:
+
+docker run -p 8000:8000 myapp
+--- What ENV means
+ENV APP_ENV=development
+
+👉 Sets environment variables inside container
+
+Example usage in Python:
+
+import os
+print(os.getenv("APP_ENV"))
+PYTHONUNBUFFERED
+ENV PYTHONUNBUFFERED=1
+
+👉 Makes Python logs appear immediately (no delay)
+
+--- Run command
+CMD ["python", "app.py"]
+
+👉 This runs when container starts
+
+
+then 
+1. Build the image (required first step)
+docker build -t myapp .
+Meaning:
+Dockerfile → Image (myapp)
+-t myapp → name of the image
+. → current folder (where Dockerfile is)
+2. Run the container (create + start)
+docker run myapp
