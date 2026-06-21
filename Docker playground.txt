@@ -1,0 +1,366 @@
+* Docker file -> image -> container 
+
+* docker container - 1) portable and 2) light weight than vm
+
+* Image is the blueprint, Container is the running application, Volume stores data permanently, Network lets containers talk to each other, and Ports let your computer talk to containers.
+
+* docker run -it ubuntu
+docker first checks whether the image is on local machine, if not it will be fetched from docker hub. here it means interactive mode . Docker container consumes the resources ...not the image.... The ubuntu container is totally isolated from our local machine (windows or macOS)
+
+* Docker Compose: tool to manage multiple containers using a single YAML file instaed of terminal
+YAML file: human-readable config file that defines services, networks, and settings
+
+
+# Docker Beginner Commands Cheat Sheet
+
+# Check Docker version
+docker --version
+
+# List downloaded images
+docker images
+
+# Download an image from Docker Hub
+docker pull postgres (by default pulls the latest version)
+docker pull postgres:15
+
+# Build an image from Dockerfile in current directory
+docker build -t myapp .
+
+# Create and start a container from an image
+docker run myapp
+
+# Run container in background (detached mode)
+docker run -d myapp 
+Without -d → Terminal shows logs (stuck)
+With -d    → Terminal shows ID (free)
+
+# Run container and expose a port
+docker run -p 8000:8000 myapp   # Port 8000(Your Laptop)      --->   Port 8000 (Docker Container)
+Port binding in Docker maps a port from your machine to a port inside the container so you can access container apps using localhost.
+Same host port cannot bind to different conatiner port.
+
+
+# Run PostgreSQL container
+docker run --name mydb \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  -d postgres
+
+# older version + custom name
+docker run --name my_old_mysql -e MYSQL_ROOT_PASSWORD=1234 -p 3306:3306 -d mysql:5.7
+
+--name my_old_mysql   → container name you choose
+mysql:5.7             → specific old MySQL version
+-d                    → run in background
+-p 3306:3306          → expose MySQL port
+-e MYSQL_ROOT_PASSWORD=1234 → set root password
+
+
+# Show running containers
+docker ps
+
+# Show all containers (running + stopped)
+docker ps -a
+
+# Stop a running container
+docker stop <container_id>
+
+# Start a stopped container (already existing)
+docker start <container_id>
+
+# Restart a container
+docker restart <container_id>
+
+# Delete a container
+docker rm <container_id>
+first we need to remove thr container then the image
+
+# Delete an image
+docker rmi <image_name>
+
+# View container logs
+docker logs <container_name>
+
+# Follow logs in real-time
+docker logs -f <container_name>
+
+# Open terminal inside container
+docker exec -it <container_name> bash
+
+# Open sh shell (if bash is unavailable)
+docker exec -it <container_name> sh
+
+# exiting the interactive mode ....not stopping the container
+exit
+# List Docker volumes
+docker volume ls
+
+# Create a volume
+docker volume create postgres_data
+
+# Remove a volume
+docker volume rm postgres_data
+
+# List Docker networks
+docker network ls
+
+# Create a network
+docker network create mynetwork
+
+# Inspect detailed container information
+docker inspect <container_name>
+
+# Show resource usage of containers
+docker stats
+
+# Remove all stopped containers
+docker container prune
+
+# Remove unused images
+docker image prune
+
+# Remove unused volumes
+docker volume prune
+
+# Remove everything unused
+docker system prune
+
+# --------------------------------------------------
+# Docker Compose Commands
+# --------------------------------------------------
+
+# Start all services
+docker compose up
+
+# Build and start services
+docker compose up --build
+
+# Start services in background
+docker compose up -d
+
+# Stop all services
+docker compose down
+
+# View running compose services
+docker compose ps
+
+# View compose logs
+docker compose logs
+
+# Follow compose logs
+docker compose logs -f
+
+# Restart a service
+docker compose restart
+
+# Stop a specific service
+docker compose stop postgres
+
+# Start a specific service
+docker compose start postgres
+
+# Execute command inside service
+docker compose exec postgres bash
+
+
+
+Docker uses linux kernel to run the container....So how can we use docker in our windows machine??
+
+Through Docker desktop application which uses light weight hypervisor layer which uses linux distribution system internally
+
+
+
+# VM vs Docker — Complete Guide
+
+---
+
+## What is a Virtual Machine (VM)?
+
+A **Virtual Machine** is a software-based computer that runs inside your real computer.
+It has its own full operating system, its own memory, its own storage — completely isolated.
+
+Think of it like renting an entire apartment: you get your own kitchen, bathroom, bedroom — everything separate.
+
+---
+
+## What is Docker (Container)?
+
+**Docker** packages just your app and the libraries it needs, then runs it on the host machine's OS kernel.
+
+Think of it like renting a single room in a shared house: you share the kitchen and bathroom, but your room is yours.
+
+---
+
+## Side-by-Side Comparison
+
+| Feature            | Virtual Machine (VM)       | Docker (Container)        |
+|--------------------|---------------------------|---------------------------|
+| Has its own OS?    | ✅ Yes (full OS)           | ❌ No (shares host OS)    |
+| Startup time       | Minutes                   | Seconds                   |
+| Size               | Gigabytes (10–50 GB)      | Megabytes (50–500 MB)     |
+| Isolation          | Very strong               | Good (process-level)      |
+| Performance        | Slower (overhead)         | Faster (near-native)      |
+| Portability        | Heavy to move             | Lightweight, easy to ship |
+| Best for           | Full OS isolation, legacy apps | Microservices, CI/CD, dev environments |
+
+---
+
+## The Hypervisor Layer
+
+The **hypervisor** is the magic layer that makes VMs possible.
+It sits between your physical hardware and the VMs, tricking each VM into thinking it has its own dedicated hardware.
+
+### Type 1 — Bare Metal Hypervisor
+
+```
+[ Physical Hardware ]
+        |
+  [ Hypervisor ]        ← runs DIRECTLY on hardware (no host OS)
+     /       \
+[ VM 1 ]   [ VM 2 ]
+```
+
+- Runs **directly on the hardware**, no host OS underneath
+- Faster and more efficient
+- Used in **data centers and enterprise servers**
+- Examples: **VMware ESXi**, **Microsoft Hyper-V**, **Xen**, **KVM**
+
+---
+
+### Type 2 — Hosted Hypervisor
+
+```
+[ Physical Hardware ]
+        |
+   [ Host OS ]          ← your normal OS (Windows/macOS/Linux)
+        |
+  [ Hypervisor ]        ← runs as an app on top of host OS
+     /       \
+[ VM 1 ]   [ VM 2 ]
+```
+
+- Runs **on top of a host OS** (like any other application)
+- Easier to install and use
+- Used on **personal computers and developer machines**
+- Examples: **VirtualBox**, **VMware Workstation**, **Parallels**
+
+---
+
+## Full Architecture Stack
+
+### VM Stack
+
+```
++--------------------+   +--------------------+
+|       App A        |   |       App B        |
++--------------------+   +--------------------+
+|    Guest OS 1      |   |    Guest OS 2      |   ← Full OS per VM (~GBs)
+| (Linux / Windows)  |   | (Linux / Windows)  |
++--------------------+   +--------------------+
+|              Hypervisor                     |   ← Tricks VMs into thinking
+|         (Type 1 or Type 2)                  |     they own the hardware
++---------------------------------------------+
+|           Physical Hardware                 |
++---------------------------------------------+
+```
+
+### Docker Stack
+
+```
++------------------+   +------------------+
+|   Container A    |   |   Container B    |
+|  (App + libs)    |   |  (App + libs)    |   ← No OS, just app + dependencies
++------------------+   +------------------+
+|           Docker Engine                  |   ← Manages containers
++------------------------------------------+
+|        Host OS (Shared Kernel)           |   ← One OS for everyone
++------------------------------------------+
+|          Physical Hardware               |
++------------------------------------------+
+```
+
+---
+
+## Key Takeaway
+
+| Concept      | Simple Explanation                                              |
+|--------------|-----------------------------------------------------------------|
+| **VM**       | A full computer inside your computer. Heavy but very isolated.  |
+| **Docker**   | A lightweight box for your app. Shares the OS, fast and small.  |
+| **Hypervisor** | The layer that tricks VMs into thinking they own the hardware. |
+| **Type 1**   | Hypervisor on bare metal → used in servers/cloud.               |
+| **Type 2**   | Hypervisor on top of your OS → used on laptops/desktops.        |
+
+---
+
+## When to Use Which?
+
+- Use **VMs** when you need full OS isolation, run different OS types, or have legacy software.
+- Use **Docker** when you want fast, lightweight, portable app deployment (microservices, CI/CD pipelines, dev environments).
+
+
+docker-compose.yml
+
+version: "3.9"
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+===========================
+
+
+services
+services = containers you want to run
+web service
+web:
+  build: .
+
+👉 Build Dockerfile in current folder
+
+ports:
+  - "8000:8000"
+
+👉 Map Django app to localhost:8000
+
+postgres service
+image: postgres:16
+
+👉 Use official PostgreSQL image
+
+environment:
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+
+👉 Set database credentials
+
+ports:
+  - "5432:5432"
+
+👉 Expose database to your laptop
+
+6. How it runs
+
+Command:
+
+docker compose up
+
+What happens:
+
+1. Builds Django image
+2. Pulls Postgres image
+3. Creates network
+4. Starts both containers
+5. Connects them automatically
+
+
